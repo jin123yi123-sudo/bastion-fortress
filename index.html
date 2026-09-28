@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>堡垒要塞 · BASTION FORTRESS</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hide">
+  <div id="crosshair">
+    <i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="c"></i>
+  </div>
+  <div id="hitmark"><div class="v" style="top:0"></div><div class="v" style="bottom:0"></div><div class="h" style="left:0"></div><div class="h" style="right:0"></div></div>
+  <div id="dmgflash"></div>
+  <div id="lowhp"></div>
+  <div id="scope"><div class="ln h"></div><div class="ln v"></div></div>
+
+  <div class="corner tl">
+    <div class="hud-box">
+      <div class="lbl">要塞核心 FORTRESS CORE</div>
+      <div class="bar core"><i id="coreBar"></i></div>
+      <div class="row" style="margin-top:6px"><span class="num" id="coreNum">1000</span><span class="lbl" style="margin-left:auto" id="corePct">100%</span></div>
+    </div>
+    <div class="hud-box" style="margin-top:8px">
+      <div class="lbl">守军状态 DEFENDER</div>
+      <div class="bar hp"><i id="hpBar"></i></div>
+      <div class="row" style="margin-top:6px"><span class="num" id="hpNum">100</span><span class="lbl" style="margin-left:auto" id="armorTxt">护甲 0</span></div>
+    </div>
+    <div class="hud-box" id="radarWrap">
+      <div class="lbl">战术雷达 RADAR</div>
+      <canvas id="radar" width="300" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="corner tr">
+    <div class="hud-box">
+      <div class="lbl">关卡 SECTOR</div>
+      <div class="num" id="hudLevel" style="font-size:17px">云霄哨塔</div>
+      <div class="lbl" style="margin-top:6px">波次 WAVE</div>
+      <div class="num" id="waveNum">1 / 5</div>
+      <div class="bar wave"><i id="waveBar"></i></div>
+      <div class="lbl" style="margin-top:6px">剩余敌人 <span class="num" id="enemyNum">0</span></div>
+    </div>
+    <div id="killfeed"></div>
+  </div>
+
+  <div class="corner tc">
+    <div class="hud-box" style="padding:6px 16px">
+      <div class="lbl">SCORE</div><div class="num" id="scoreNum" style="font-size:22px">0</div>
+    </div>
+  </div>
+
+  <div class="corner bl">
+    <div class="hud-box">
+      <div class="lbl">视角 <span id="viewTag" style="color:var(--amber)">第三人称</span> · V 切换</div>
+      <div class="row" style="margin-top:6px">
+        <div class="ammo" id="ammoNum">30<small>/90</small></div>
+        <div style="margin-left:8px;font-size:13px;color:var(--steel)" id="wpnName">突击步枪</div>
+      </div>
+      <div id="reloadHint" class="reloadwarn hide">按 R 换弹</div>
+    </div>
+  </div>
+
+  <div class="corner br">
+    <div class="wp" id="weaponBar"></div>
+    <div class="hud-box" style="margin-top:8px;min-width:210px">
+      <div class="spread"><span class="lbl">命中率</span><span class="num" id="accNum">--</span></div>
+      <div class="spread"><span class="lbl">击杀 / 爆头</span><span class="num" id="killNum">0 / 0</span></div>
+      <div class="spread"><span class="lbl">时间</span><span class="num" id="timeNum">00:00</span></div>
+      <div class="spread"><span class="lbl">难度</span><span class="num" id="diffNum">-</span></div>
+    </div>
+  </div>
+
+  <div id="combo"><div class="k">x2</div><div class="t">CHAIN</div></div>
+  <div id="wavetoast"><div class="w">第 2 波</div><div class="s">WAVE INCOMING</div></div>
+  <div id="banner">按 <b>ESC</b> 暂停 · <b>V</b> 视角 · <b>1/2/3</b> 换枪 · <b>R</b> 换弹 · <b>右键</b> 瞄准</div>
+</div>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="menu" class="layer hide">
+  <div class="veil"></div>
+  <div class="panel">
+    <div id="menuBg" class="artbg"></div>
+  <div id="menuLogo" class="artlogo"></div>
+  <div class="brand"><div class="cn">堡垒要塞</div><div class="en">BASTION FORTRESS</div></div>
+    <div class="subtitle">9 座要塞 · 双视角守城射击 · 三星清关制</div>
+    <div class="toolbar">
+      <div class="statbox">总星数 <b id="totalStars">0</b>/27</div>
+      <div class="statbox">已攻克 <b id="clearedNum">0</b>/9</div>
+      <div class="statbox">最高分 <b id="bestScore">0</b></div>
+      <div style="flex:1"></div>
+      <div class="row">
+        <div class="tag">灵敏度</div>
+        <input type="range" id="sensRange" min="20" max="300" value="120" style="width:130px;accent-color:var(--amber)">
+        <div class="statbox" id="sensVal" style="padding:6px 8px">1.20</div>
+      </div>
+      <button class="btn sm" id="muteBtn">音效 开</button>
+      <button class="btn sm" id="helpBtn">操作说明</button>
+      <button class="btn sm ghost" id="wipeBtn">清空存档</button>
+    </div>
+    <div class="lbl" style="margin-bottom:8px">选择要塞防线 / SELECT FORTRESS</div>
+    <div class="grid" id="levelGrid"></div>
+  </div>
+</div>
+
+<!-- ============ BRIEF ============ -->
+<div id="brief" class="layer hide">
+  <div class="veil"></div>
+  <div class="panel">
+    <div id="bfCover" class="artcover"></div>
+    <div class="codename" id="bfCode">SECTOR 01 · SKYWATCH SPIRE</div>
+    <h2 id="bfName">云霄哨塔</h2>
+    <div class="lbl" id="bfTerrain">地形：天际高台</div>
+    <div class="desc" id="bfDesc"></div>
+    <div class="lbl">来敌方向 THREAT VECTOR</div>
+    <div class="enemyline" id="bfThreat"></div>
+    <div class="intel">
+      <div><span>核心耐久</span><b id="bfCore">1000</b></div>
+      <div><span>波次总数</span><b id="bfWaves">5</b></div>
+      <div><span>三星要求</span><b id="bfStar3">-</b></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn ghost" id="bfBack">返回</button>
+      <button class="btn" id="bfViewBtn">视角：<span id="bfView">第三人称</span></button>
+      <button class="btn primary" id="bfStart">进入防线</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAUSE ============ -->
+<div id="pause" class="layer hide">
+  <div class="veil"></div>
+  <div class="panel">
+    <div class="rTitle">暂停</div><div class="rSub">PAUSED</div>
+    <div class="setting"><span>鼠标灵敏度</span><div class="row"><input type="range" id="pSens" min="20" max="300" value="120"><span class="val" id="pSensVal">120</span></div></div>
+    <div class="setting"><span>视角模式</span><div class="row">
+      <button class="btn sm" id="pFps">第一人称</button><button class="btn sm primary" id="pTps">第三人称</button></div></div>
+    <div class="setting"><span>音效</span><button class="btn sm" id="pMute">开</button></div>
+    <div class="keys">
+      <div><b>WASD</b> 移动 / 空格跳跃</div><div><b>鼠标</b> 瞄准 · <b>左键</b> 射击</div>
+      <div><b>右键</b> 精确瞄准</div><div><b>1/2/3</b> 切换武器</div>
+      <div><b>R</b> 换弹 · <b>V</b> 视角</div><div><b>Shift</b> 疾跑 · <b>ESC</b> 暂停</div>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:18px">
+      <button class="btn primary" id="pResume">继续战斗</button>
+      <button class="btn" id="pRestart">重来本关</button>
+      <button class="btn ghost" id="pQuit">放弃并返回</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RESULT ============ -->
+<div id="result" class="layer hide">
+  <div class="veil"></div>
+  <div class="panel">
+    <div class="rTitle" id="rsTitle">防线守住了</div>
+    <div class="rSub" id="rsSub">SECTOR CLEARED</div>
+    <div class="rStars" id="rsStars"></div>
+    <table class="scoreTbl" id="rsTable"></table>
+    <div class="row" style="justify-content:center;margin-top:18px">
+      <button class="btn ghost" id="rsMenu">要塞列表</button>
+      <button class="btn" id="rsRetry">再战刷星</button>
+      <button class="btn primary hide" id="rsNext">下一要塞</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HELP ============ -->
+<div id="help" class="layer hide">
+  <div class="veil"></div>
+  <div class="panel" style="width:min(620px,92vw)">
+    <div class="rTitle">操作说明</div><div class="rSub">CONTROLS</div>
+    <div class="keys" style="grid-template-columns:1fr">
+      <div><b>鼠标移动</b> 瞄准视角</div>
+      <div><b>鼠标左键</b> 开火</div>
+      <div><b>鼠标右键</b> 精确瞄准（狙击枪开镜）</div>
+      <div><b>W A S D</b> 在要塞平台上移动</div>
+      <div><b>Shift</b> 疾跑</div>
+      <div><b>空格</b> 跳跃</div>
+      <div><b>V</b> 切换第一/第三人称</div>
+      <div><b>1 / 2 / 3</b> 突击步枪 / 霰弹枪 / 狙击枪</div>
+      <div><b>R</b> 换弹</div>
+      <div><b>ESC</b> 暂停菜单</div>
+    </div>
+    <div class="desc" style="color:var(--steel);font-size:13.5px;line-height:1.8;margin-top:14px">
+      守住<b style="color:var(--amber)">要塞核心</b>：敌人会从各自的方向推进，越过外墙贴脸攻击时核心开始掉血。
+      每关最多 <b style="color:var(--warn)">3 星</b>：通关即 1 星，核心完整度高则 2～3 星。
+      累计星数解锁后续要塞，旧关卡可以重复刷星。
+    </div>
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="btn primary" id="helpClose">明白了</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="loading">
+  <div class="lg">BASTION FORTRESS</div>
+  <div class="spinner"></div>
+  <div class="sub" id="loadSub">正在装载要塞数据…</div>
+  <div class="err hide" id="loadErr"></div>
+</div>
+
+<script src="js/vendor/three.min.js"></script>
+<script>
+  if(!window.THREE){
+    document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"><\/script>');
+  }
+</script>
+<script src="js/art.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/world.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/game.js"></script>
+<script>
+  (function(){
+    if(!window.THREE){
+      var e=document.getElementById('loadErr');
+      e.classList.remove('hide');
+      e.innerHTML='无法加载 3D 引擎 three.js。<br>请确认 <b>js/vendor/three.min.js</b> 存在，或联网后重试。';
+      document.getElementById('loadSub').textContent='加载失败';
+      return;
+    }
+    window.addEventListener('load',function(){
+      try{ BF.boot(); }catch(err){
+        var e=document.getElementById('loadErr');
+        e.classList.remove('hide');
+        e.textContent='启动失败：'+err.message;
+        console.error(err);
+      }
+    });
+  })();
+</script>
+</body>
+</html>
